@@ -1,0 +1,24 @@
+# Python cache and bytecode
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environment
+.venv/
+venv/
+
+# Secrets and local config
+.env
+.env.*
+!.env.example
+
+# OS/editor artifacts
+.DS_Store
+.vscode/
+
+# Model artifacts downloaded/generated at runtime
+model/*.keras
+model/*.h5
+model/*.ckpt
+model/**/*.keras
+model/*.log
