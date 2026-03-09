@@ -45,6 +45,26 @@ KAGGLE_USERNAME=your_username
 KAGGLE_KEY=your_key
 ```
 
+## Streamlit Cloud Secrets (Deployment)
+
+For Streamlit Cloud, set credentials in **App settings -> Secrets** instead of committing `.env`.
+
+Example (token mode):
+
+```toml
+KAGGLE_API_TOKEN = "your_token_here"
+KAGGLE_USERNAME = "your_username"
+```
+
+Or legacy mode:
+
+```toml
+KAGGLE_USERNAME = "your_username"
+KAGGLE_KEY = "your_key"
+```
+
+Note: Do not wrap values in angle brackets (`< >`).
+
 ## Run the App
 
 ```bash

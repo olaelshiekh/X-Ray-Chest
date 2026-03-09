@@ -16,16 +16,48 @@ MODEL_FILENAME = "best_model.keras"
 CLASS_NAMES_FILENAME = "class_names.json"
 
 
+def _clean_secret_value(value: Any) -> str:
+	"""Normalize secret values from env/secrets, including accidental wrapping quotes/brackets."""
+	if value is None:
+		return ""
+	cleaned = str(value).strip()
+	if (cleaned.startswith('"') and cleaned.endswith('"')) or (
+		cleaned.startswith("'") and cleaned.endswith("'")
+	):
+		cleaned = cleaned[1:-1].strip()
+	if (cleaned.startswith("<") and cleaned.endswith(">")):
+		cleaned = cleaned[1:-1].strip()
+	return cleaned
+
+
+def _get_secret(name: str) -> str:
+	# Priority: environment variable, then Streamlit secrets (flat and [kaggle] section).
+	env_value = _clean_secret_value(os.getenv(name))
+	if env_value:
+		return env_value
+
+	try:
+		if name in st.secrets:
+			return _clean_secret_value(st.secrets[name])
+		if "kaggle" in st.secrets and name in st.secrets["kaggle"]:
+			return _clean_secret_value(st.secrets["kaggle"][name])
+	except Exception:
+		# Accessing st.secrets can fail in some local contexts; fallback to env-only behavior.
+		pass
+
+	return ""
+
+
 def _configure_kaggle_auth() -> None:
 	load_dotenv(dotenv_path=Path(".env"), override=False)
 
-	username = (os.getenv("KAGGLE_USERNAME") or "").strip()
-	kaggle_key = (os.getenv("KAGGLE_KEY") or "").strip()
-	api_token = (os.getenv("KAGGLE_API_TOKEN") or "").strip()
+	username = _get_secret("KAGGLE_USERNAME")
+	kaggle_key = _get_secret("KAGGLE_KEY")
+	api_token = _get_secret("KAGGLE_API_TOKEN")
 
 	if not api_token and not (username and kaggle_key):
 		raise RuntimeError(
-			"Missing Kaggle auth. Set KAGGLE_API_TOKEN in .env (recommended), or KAGGLE_USERNAME + KAGGLE_KEY."
+			"Missing Kaggle auth. Configure KAGGLE_API_TOKEN, or KAGGLE_USERNAME + KAGGLE_KEY, in Streamlit secrets or .env."
 		)
 
 	kaggle_dir = Path.home() / ".kaggle"
@@ -52,6 +84,11 @@ def _run_kaggle_cli(args: list[str]) -> None:
 		stderr = (result.stderr or "").strip()
 		stdout = (result.stdout or "").strip()
 		details = stderr or stdout or "Unknown Kaggle CLI error."
+		if "authenticate" in details.lower() or "unauthorized" in details.lower():
+			details = (
+				"Kaggle authentication failed. Verify Streamlit secrets/.env values for "
+				"KAGGLE_API_TOKEN or KAGGLE_USERNAME + KAGGLE_KEY."
+			)
 		raise RuntimeError(details)
 
 
